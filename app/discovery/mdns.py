@@ -2,6 +2,7 @@ import asyncio
 import socket
 from zeroconf import Zeroconf, ServiceInfo
 from zeroconf.asyncio import AsyncZeroconf, AsyncServiceBrowser
+from zeroconf._exceptions import NonUniqueNameException
 
 class MDNSDiscovery:
     """Handle mDNS discovery and advertising."""
@@ -29,7 +30,16 @@ class MDNSDiscovery:
             port=port,
             properties=txt
         )
-        self.zeroconf.register_service(info)
+        try:
+            self.zeroconf.register_service(info)
+        except NonUniqueNameException:
+            # Service already registered, unregister and re-register
+            try:
+                self.zeroconf.unregister_service(info)
+                self.zeroconf.register_service(info)
+            except Exception as e:
+                print(f"Warning: Could not re-register service: {e}")
+                # Continue anyway - the old service should timeout
 
     def stop(self):
         """Stop advertising."""
