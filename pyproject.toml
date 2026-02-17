@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "myshare"
+version = "0.1.0"
+description = "Cross-platform PC-to-PC local sharing app"
+authors = [{name = "Your Name"}]
+requires-python = ">=3.11"
+dependencies = [
+    "zeroconf>=0.132.0",
+    "aiohttp>=3.9.0",
+    "cryptography>=42.0.0",
+    "click>=8.1.0",
+]
+
+[project.scripts]
+myshare = "app.main:main"
