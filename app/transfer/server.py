@@ -54,7 +54,7 @@ class TransferServer:
         sender_id = data.get('sender_id')
         receiver_id = data.get('receiver_id')
         signature = data.get('signature')
-        pubkey_pem = data.get('pubkey_pem')
+        pubkey_pem_field = data.get('pubkey_pem')
 
         if not all([file, filename, file_hash, nonce, sender_id, receiver_id, signature]):
             return web.Response(status=400, text="Missing fields")
@@ -62,11 +62,21 @@ class TransferServer:
         # Try to get pubkey from trust store, or use the one from request
         pubkey = self.trust_store.get_pubkey(sender_id)
         if not pubkey:
-            if pubkey_pem:
+            if pubkey_pem_field:
                 try:
+                    # Handle both bytes and string
+                    if hasattr(pubkey_pem_field, 'read'):
+                        pubkey_pem = pubkey_pem_field.read()
+                    else:
+                        pubkey_pem = pubkey_pem_field
+                    
+                    # Ensure it's bytes
+                    if isinstance(pubkey_pem, str):
+                        pubkey_pem = pubkey_pem.encode('utf-8')
+                    
                     pubkey = serialization.load_pem_public_key(pubkey_pem)
-                except Exception:
-                    return web.Response(status=403, text="Invalid pubkey")
+                except Exception as e:
+                    return web.Response(status=403, text=f"Invalid pubkey: {str(e)}")
             else:
                 return web.Response(status=403, text="Sender not trusted and no pubkey provided")
 

@@ -46,7 +46,7 @@ class TransferClient:
         pubkey_pem = self.identity.public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo
-        )
+        ).decode('utf-8')  # Convert bytes to string
 
         data = FormData()
         data.add_field('file', content, filename=file_path.name)
