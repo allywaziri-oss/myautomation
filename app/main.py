@@ -14,8 +14,8 @@ def main():
 
 @main.command()
 @click.option('--port', default=8080, help='Port to listen on')
-def arm_receive(port):
-    """Arm the device to receive files."""
+def listen(port):
+    """Start listening to receive files."""
     identity = Identity()
     trust_store = TrustStore()
     mdns = MDNSDiscovery(identity)
@@ -27,8 +27,8 @@ def arm_receive(port):
         mdns.stop()
 
 @main.command()
-def discover():
-    """Discover available devices."""
+def search():
+    """Search for available devices on the network."""
     config_dir = Path.home() / '.myshare'
     identity = Identity()
     registry = DeviceRegistry(config_dir)
@@ -71,7 +71,7 @@ def trust(device_id):
         if device_info:
             actual_id = device_info['device_id']
         else:
-            click.echo(f"Device {device_id} not found in registry. Run 'myshare discover' first")
+            click.echo(f"Device {device_id} not found in registry. Run 'myshare search' first")
             return
     else:
         # Full UUID provided
@@ -115,7 +115,7 @@ def send(device_id, file_path):
         if device_info:
             actual_device_id = device_info['device_id']
         else:
-            click.echo(f"Device {device_id} not found in registry. Run 'myshare discover' first")
+            click.echo(f"Device {device_id} not found in registry. Run 'myshare search' first")
             return
     else:
         # Full UUID provided
