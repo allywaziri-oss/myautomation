@@ -6,6 +6,7 @@ from .discovery.mdns import MDNSDiscovery
 from .transfer.server import TransferServer
 from .transfer.client import TransferClient
 from .device_registry import DeviceRegistry
+from .grab_state import GrabState
 from pathlib import Path
 
 @click.group()
@@ -56,6 +57,36 @@ def search():
     click.echo(f"\nUse 'myshare send [ID] <file>' to send to a device")
 
 @main.command()
+@click.argument('file_path')
+def grab(file_path):
+    """Grab a file to send later (grab-and-release workflow)."""
+    try:
+        grab_state = GrabState()
+        grab_state.grab(file_path)
+        grabbed_path = Path(file_path).name
+        click.echo(f"📎 Grabbed: {grabbed_path}")
+        click.echo(f"   Use 'myshare send [ID]' to release to a device")
+    except FileNotFoundError as e:
+        click.echo(f"Error: {e}")
+
+@main.command()
+def release():
+    """Release the currently grabbed file."""
+    grab_state = GrabState()
+    grabbed = grab_state.get_grabbed()
+    if grabbed:
+        grab_state.release()
+        click.echo(f"Released: {Path(grabbed).name}")
+    else:
+        click.echo("No file grabbed")
+
+@main.command()
+def grabbed():
+    """Show currently grabbed file."""
+    grab_state = GrabState()
+    click.echo(grab_state.show_grabbed())
+
+@main.command()
 @click.argument('device_id')
 def trust(device_id):
     """Trust a device by ID (4-digit or full UUID)."""
@@ -98,9 +129,19 @@ def trust(device_id):
 
 @main.command()
 @click.argument('device_id')
-@click.argument('file_path')
+@click.argument('file_path', required=False)
 def send(device_id, file_path):
-    """Send a file to a device using short ID (0001) or full UUID."""
+    """Send a file to a device. If no file specified, uses grabbed file."""
+    grab_state = GrabState()
+    
+    # If no file_path provided, try to use grabbed file
+    if not file_path:
+        file_path = grab_state.get_grabbed()
+        if not file_path:
+            click.echo("No file specified and no grabbed file. Use 'myshare grab <file>' first")
+            return
+        click.echo(f"📨 Sending grabbed file: {Path(file_path).name}")
+    
     config_dir = Path.home() / '.myshare'
     identity = Identity()
     trust_store = TrustStore()
@@ -134,6 +175,9 @@ def send(device_id, file_path):
     client = TransferClient(identity, trust_store)
     try:
         asyncio.run(client.send_file(device_info['address'], device_info['port'], file_path, actual_device_id))
+        # Auto-release grabbed file after successful send
+        if grab_state.get_grabbed() == str(Path(file_path).absolute()):
+            grab_state.release()
     except Exception as e:
         click.echo(f"Failed to send file: {e}")
 
