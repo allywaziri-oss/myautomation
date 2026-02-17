@@ -52,6 +52,7 @@ class TransferServer:
         nonce = data.get('nonce')
         timestamp = float(data.get('timestamp', 0))
         sender_id = data.get('sender_id')
+        sender_name = data.get('sender_name', f'Device-{sender_id[:8]}')
         receiver_id = data.get('receiver_id')
         signature = data.get('signature')
         pubkey_pem_field = data.get('pubkey_pem')
@@ -59,6 +60,9 @@ class TransferServer:
         if not all([file, filename, file_hash, nonce, sender_id, receiver_id, signature]):
             return web.Response(status=400, text="Missing fields")
 
+        # Check if sender is already trusted
+        is_new_sender = not self.trust_store.is_trusted(sender_id)
+        
         # Try to get pubkey from trust store, or use the one from request
         pubkey = self.trust_store.get_pubkey(sender_id)
         if not pubkey:
@@ -82,6 +86,11 @@ class TransferServer:
 
         if not self.auth.verify_auth(file_hash, nonce, timestamp, sender_id, receiver_id, signature, pubkey):
             return web.Response(status=403, text="Auth failed")
+
+        # Auto-trust new senders after successful signature verification
+        if is_new_sender and pubkey:
+            self.trust_store.add_device(sender_id, sender_name, pubkey)
+            print(f"Auto-trusted new device: {sender_name}")
 
         # Save file
         safe_filename = self.safe_filename(filename)

@@ -55,6 +55,7 @@ class TransferClient:
         data.add_field('nonce', nonce)
         data.add_field('timestamp', str(timestamp))
         data.add_field('sender_id', sender_id)
+        data.add_field('sender_name', self.identity.device_id[:8])  # Short form for display
         data.add_field('receiver_id', receiver_id)
         data.add_field('signature', signature)
         data.add_field('pubkey_pem', pubkey_pem)
