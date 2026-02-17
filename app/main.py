@@ -55,7 +55,7 @@ def trust(device_id):
 @click.argument('device_id')
 @click.argument('file_path')
 def send(device_id, file_path):
-    """Send a file to a trusted device."""
+    """Send a file to a device."""
     identity = Identity()
     trust_store = TrustStore()
     mdns = MDNSDiscovery(identity)
@@ -63,9 +63,6 @@ def send(device_id, file_path):
     device = next((d for d in devices if d['device_id'] == device_id), None)
     if not device:
         click.echo("Device not found")
-        return
-    if not trust_store.is_trusted(device_id):
-        click.echo("Device not trusted")
         return
     client = TransferClient(identity, trust_store)
     asyncio.run(client.send_file(device['address'], device['port'], file_path, device_id))

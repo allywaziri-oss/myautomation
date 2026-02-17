@@ -42,6 +42,12 @@ class TransferClient:
 
         signature = self.auth.create_auth_header(file_hash, nonce, timestamp, sender_id, receiver_id)
 
+        # Serialize sender's public key
+        pubkey_pem = self.identity.public_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        )
+
         data = FormData()
         data.add_field('file', content, filename=file_path.name)
         data.add_field('filename', file_path.name)
@@ -51,6 +57,7 @@ class TransferClient:
         data.add_field('sender_id', sender_id)
         data.add_field('receiver_id', receiver_id)
         data.add_field('signature', signature)
+        data.add_field('pubkey_pem', pubkey_pem)
 
         url = f"https://{address}:{port}/upload"
         async with ClientSession() as session:
