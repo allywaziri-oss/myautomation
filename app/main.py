@@ -7,6 +7,7 @@ from .transfer.server import TransferServer
 from .transfer.client import TransferClient
 from .device_registry import DeviceRegistry
 from .grab_state import GrabState
+from .camera_grab import CameraGrab
 from pathlib import Path
 
 @click.group()
@@ -67,6 +68,23 @@ def grab(file_path):
         click.echo(f"📎 Grabbed: {grabbed_path}")
         click.echo(f"   Use 'myshare send [ID]' to release to a device")
     except FileNotFoundError as e:
+        click.echo(f"Error: {e}")
+
+@main.command()
+def camera():
+    """Grab a file using camera gesture (point and grab)."""
+    try:
+        camera_grab = CameraGrab()
+        camera_grab.grab_by_camera()
+        grabbed = camera_grab.get_grabbed()
+        if grabbed:
+            click.echo(f"\n✅ File Grabbed!")
+            click.echo(f"📄 Name: {Path(grabbed).name}")
+            click.echo(f"📂 Path: {grabbed}")
+            click.echo(f"\n💡 Ready to send! Use: myshare send [ID]")
+        else:
+            click.echo("❌ No file grabbed")
+    except Exception as e:
         click.echo(f"Error: {e}")
 
 @main.command()
@@ -132,13 +150,13 @@ def trust(device_id):
 @click.argument('file_path', required=False)
 def send(device_id, file_path):
     """Send a file to a device. If no file specified, uses grabbed file."""
-    grab_state = GrabState()
+    camera_grab = CameraGrab()
     
     # If no file_path provided, try to use grabbed file
     if not file_path:
-        file_path = grab_state.get_grabbed()
+        file_path = camera_grab.get_grabbed()
         if not file_path:
-            click.echo("No file specified and no grabbed file. Use 'myshare grab <file>' first")
+            click.echo("No file specified and no grabbed file. Use 'myshare grab <file>' or 'myshare camera' first")
             return
         click.echo(f"📨 Sending grabbed file: {Path(file_path).name}")
     
@@ -176,8 +194,8 @@ def send(device_id, file_path):
     try:
         asyncio.run(client.send_file(device_info['address'], device_info['port'], file_path, actual_device_id))
         # Auto-release grabbed file after successful send
-        if grab_state.get_grabbed() == str(Path(file_path).absolute()):
-            grab_state.release()
+        if camera_grab.get_grabbed() == str(Path(file_path).absolute()):
+            camera_grab.release()
     except Exception as e:
         click.echo(f"Failed to send file: {e}")
 
